@@ -20,7 +20,7 @@ main:
 	mov ax, 0x2403
 	int 0x15
 	
-	; loading stage 2 from disk
+	; loading stage 2 real from disk
 
 	mov ah, 0x2
 	mov al, [sectors]
@@ -30,6 +30,12 @@ main:
 	mov dl, [drive]
 	mov bx, 0x9000
 	int 0x13
+	
+	mov ah, 0x2
+	mov al, 0x1
+	mov cl, 0x3
+	mov bx, 0x9500
+	int 0x13
 
 	jc disk_error
 	
@@ -38,15 +44,8 @@ main:
 	
 	cmp al, [sectors]
 	jne disk_error
-	
-	cli
-	lgdt [gdt_desc]
-	
-	mov eax, cr0
-	or al, 1
-	mov cr0, eax
 
-	jmp CODE:pm
+	jmp 0x9000
 	
 disk_error:
 	mov si, disk_error_msg
@@ -63,25 +62,10 @@ disk_error_msg db "Error reading from disk", 0xA, 0
 
 %include "real/gdt.asm"
 
-BITS 32
-
-pm:
-	mov ax, DATA
-	mov ds, ax
-	mov ss, ax
-
-	mov byte [0x0B8000], 'P'
-	mov byte [0x0B8001], 0x1B
-	jmp 0x9000
-
-BITS 16
-
 times 510-($-$$) db 0
 
 dw 0xAA55
 
 BITS 32
 
-mov byte [0x0B8000], '2'
-mov byte [0x0B8001], 0x1B
-jmp $
+%include "prot/stage2.asm"
